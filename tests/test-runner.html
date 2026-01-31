@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>五子棋游戏测试</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .test-results {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .test-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        
+        .test-button:hover {
+            background: #2980b9;
+        }
+        
+        .success { color: #27ae60; }
+        .error { color: #e74c3c; }
+        
+        .summary {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .summary.pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .summary.fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>五子棋游戏测试</h1>
+        
+        <div>
+            <button class="test-button" onclick="runAllTests()">运行所有测试</button>
+            <button class="test-button" onclick="runLogicTests()">测试游戏逻辑</button>
+            <button class="test-button" onclick="runBoardTests()">测试游戏棋盘</button>
+            <button class="test-button" onclick="clearResults()">清除结果</button>
+        </div>
+        
+        <div id="test-results" class="test-results">
+            点击上方按钮开始测试...
+        </div>
+        
+        <div id="test-summary"></div>
+    </div>
+
+    <!-- 引入游戏文件 -->
+    <script src="../src/game/GameLogic.js"></script>
+    <script src="../src/game/GameBoard.js"></script>
+    <script src="../src/utils/helpers.js"></script>
+    
+    <script>
+        // 测试框架
+        class TestRunner {
+            constructor() {
+                this.tests = [];
+                this.results = [];
+            }
+
+            test(name, category, testFunc) {
+                this.tests.push({ name, category, testFunc });
+            }
+
+            runTests(category = null) {
+                this.results = [];
+                const output = document.getElementById('test-results');
+                output.innerHTML = '开始运行测试...\n\n';
+
+                let passedCount = 0;
+                let failedCount = 0;
+
+                for (const { name, category: testCategory, testFunc } of this.tests) {
+                    if (category && testCategory !== category) continue;
+
+                    try {
+                        testFunc();
+                        output.innerHTML += `<span class="success">✓ ${name}</span>\n`;
+                        this.results.push({ name, status: 'passed', category: testCategory });
+                        passedCount++;
+                    } catch (error) {
+                        output.innerHTML += `<span class="error">✗ ${name}</span>\n`;
+                        output.innerHTML += `  <span class="error">错误: ${error.message}</span>\n\n`;
+                        this.results.push({ name, status: 'failed', error: error.message, category: testCategory });
+                        failedCount++;
+                    }
+                }
+
+                this.showSummary(passedCount, failedCount);
+                return failedCount === 0;
+            }
+
+            showSummary(passed, failed) {
+                const summary = document.getElementById('test-summary');
+                const total = passed + failed;
+                const successRate = total > 0 ? ((passed / total) * 100).toFixed(1) : 0;
+
+                summary.innerHTML = `
+                    <div class="summary ${failed === 0 ? 'pass' : 'fail'}">
+                        测试完成: ${passed} 通过, ${failed} 失败 (总计: ${total})
+                        <br>成功率: ${successRate}%
+                    </div>
+                `;
+            }
+
+            assert(condition, message) {
+                if (!condition) {
+                    throw new Error(message || '断言失败');
+                }
+            }
+
+            assertEqual(actual, expected, message) {
+                if (actual !== expected) {
+                    throw new Error(message || `期望: ${expected}, 实际: ${actual}`);
+                }
+            }
+
+            clear() {
+                document.getElementById('test-results').innerHTML = '点击上方按钮开始测试...';
+                document.getElementById('test-summary').innerHTML = '';
+            }
+        }
+
+        const runner = new TestRunner();
+
+        // 游戏逻辑测试
+        runner.test('应该验证有效的移动位置', 'logic', () => {
+            const gameLogic = new GameLogic();
+            const board = Array(15).fill(null).map(() => Array(15).fill(null));
+            
+            runner.assert(gameLogic.isValidMove(board, 7, 7), '中心位置应该有效');
+            runner.assert(gameLogic.isValidMove(board, 0, 0), '边角位置应该有效');
+            runner.assert(gameLogic.isValidMove(board, 14, 14), '右下角应该有效');
+        });
+
+        runner.test('应该拒绝无效的移动位置', 'logic', () => {
+            const gameLogic = new GameLogic();
+            const board = Array(15).fill(null).map(() => Array(15).fill(null));
+            board[7][7] = 'black';
+            
+            runner.assert(!gameLogic.isValidMove(board, 7, 7), '已占用位置应该无效');
+            runner.assert(!gameLogic.isValidMove(board, -1, 0), '负坐标应该无效');
+            runner.assert(!gameLogic.isValidMove(board, 15, 0), '超出边界应该无效');
+            runner.assert(!gameLogic.isValidMove(board, 0, 15), '超出边界应该无效');
+        });
+
+        runner.test('应该检测水平获胜', 'logic', () => {
+            const gameLogic = new GameLogic();
+            const board = Array(15).fill(null).map(() => Array(15).fill(null));
+            
+            // 设置黑子水平连成五子
+            for (let i = 0; i < 5; i++) {
+                board[7][i + 5] = 'black';
+            }
+            
+            runner.assert(gameLogic.checkWinner(board, 7, 9, 'black'), '应该检测到水平获胜');
+        });
+
+        runner.test('应该检测垂直获胜', 'logic', () => {
+            const gameLogic = new GameLogic();
+            const board = Array(15).fill(null).map(() => Array(15).fill(null));
+            
+            // 设置白子垂直连成五子
+            for (let i = 0; i < 5; i++) {
+                board[i + 5][7] = 'white';
+            }
+            
+            runner.assert(gameLogic.checkWinner(board, 9, 7, 'white'), '应该检测到垂直获胜');
+        });
+
+        runner.test('应该检测对角线获胜', 'logic', () => {
+            const gameLogic = new GameLogic();
+            const board = Array(15).fill(null).map(() => Array(15).fill(null));
+            
+            // 设置黑子对角线连成五子
+            for (let i = 0; i < 5; i++) {
+                board[i + 5][i + 5] = 'black';
+            }
+            
+            runner.assert(gameLogic.checkWinner(board, 9, 9, 'black'), '应该检测到对角线获胜');
+        });
+
+        runner.test('应该检测平局', 'logic', () => {
+            const gameLogic = new GameLogic();
+            const board = Array(15).fill(null).map(() => Array(15).fill(null));
+            
+            // 填满棋盘（简化版）
+            for (let i = 0; i < 5; i++) {
+                for (let j = 0; j < 5; j++) {
+                    board[i][j] = (i + j) % 2 === 0 ? 'black' : 'white';
+                }
+            }
+            
+            // 这只是部分填充，用于测试函数
+            runner.assert(!gameLogic.checkDraw(board), '部分填充的棋盘不应该平局');
+        });
+
+        // 游戏棋盘测试
+        runner.test('应该正确创建空棋盘', 'board', () => {
+            const gameBoard = new GameBoard();
+            const board = gameBoard.getBoardCopy();
+            
+            runner.assertEqual(board.length, 15, '棋盘应该有15行');
+            runner.assertEqual(board[0].length, 15, '每行应该有15列');
+            runner.assertEqual(board[7][7], null, '初始位置应该为空');
+        });
+
+        runner.test('应该正确下棋', 'board', () => {
+            const gameBoard = new GameBoard();
+            
+            gameBoard.makeMove(7, 7);
+            runner.assertEqual(gameBoard.getBoardCopy()[7][7], 'black', '第一步应该是黑子');
+            runner.assertEqual(gameBoard.getCurrentPlayer(), 'white', '下棋后应该切换玩家');
+            
+            gameBoard.makeMove(7, 8);
+            runner.assertEqual(gameBoard.getBoardCopy()[7][8], 'white', '第二步应该是白子');
+            runner.assertEqual(gameBoard.getCurrentPlayer(), 'black', '下棋后应该切换玩家');
+        });
+
+        runner.test('应该正确记录移动历史', 'board', () => {
+            const gameBoard = new GameBoard();
+            
+            gameBoard.makeMove(7, 7);
+            gameBoard.makeMove(7, 8);
+            
+            const history = gameBoard.getMoveHistory();
+            runner.assertEqual(history.length, 2, '应该记录两步移动');
+            runner.assertEqual(history[0].player, 'black', '第一步应该是黑子');
+            runner.assertEqual(history[1].player, 'white', '第二步应该是白子');
+        });
+
+        runner.test('应该正确重置游戏', 'board', () => {
+            const gameBoard = new GameBoard();
+            
+            gameBoard.makeMove(7, 7);
+            gameBoard.makeMove(7, 8);
+            
+            gameBoard.reset();
+            
+            runner.assertEqual(gameBoard.getCurrentPlayer(), 'black', '重置后当前玩家应该是黑子');
+            runner.assertEqual(gameBoard.getGameStatus(), 'playing', '重置后游戏状态应该是进行中');
+            runner.assertEqual(gameBoard.getMoveHistory().length, 0, '重置后移动历史应该为空');
+            runner.assertEqual(gameBoard.getBoardCopy()[7][7], null, '重置后棋盘应该为空');
+        });
+
+        runner.test('应该拒绝无效移动', 'board', () => {
+            const gameBoard = new GameBoard();
+            
+            try {
+                gameBoard.makeMove(-1, 0);
+                runner.assert(false, '应该抛出错误');
+            } catch (error) {
+                runner.assert(error.message.includes('无效的移动'), '错误消息应该正确');
+            }
+            
+            gameBoard.makeMove(7, 7);
+            try {
+                gameBoard.makeMove(7, 7);
+                runner.assert(false, '应该抛出错误');
+            } catch (error) {
+                runner.assert(error.message.includes('无效的移动'), '错误消息应该正确');
+            }
+        });
+
+        // 工具函数测试
+        runner.test('应该正确深拷贝对象', 'utils', () => {
+            const original = { a: 1, b: { c: 2 }, d: [3, 4] };
+            const copied = Helpers.deepClone(original);
+            
+            copied.b.c = 5;
+            copied.d[0] = 6;
+            
+            runner.assertEqual(original.b.c, 2, '原对象的嵌套对象不应该被修改');
+            runner.assertEqual(original.d[0], 3, '原对象的数组不应该被修改');
+            runner.assertEqual(copied.b.c, 5, '拷贝对象的嵌套对象应该被修改');
+            runner.assertEqual(copied.d[0], 6, '拷贝对象的数组应该被修改');
+        });
+
+        runner.test('应该正确转换棋盘坐标', 'utils', () => {
+            runner.assertEqual(Helpers.boardToDisplayCoords(0, 0), 'A15', '左上角坐标转换应该正确');
+            runner.assertEqual(Helpers.boardToDisplayCoords(14, 14), 'O1', '右下角坐标转换应该正确');
+            runner.assertEqual(Helpers.boardToDisplayCoords(7, 7), 'H8', '中心坐标转换应该正确');
+            
+            const coords = Helpers.displayToBoardCoords('H8');
+            runner.assertEqual(coords.row, 7, '显示坐标转棋盘行应该正确');
+            runner.assertEqual(coords.col, 7, '显示坐标转棋盘列应该正确');
+        });
+
+        // 控制函数
+        function runAllTests() {
+            runner.runTests();
+        }
+
+        function runLogicTests() {
+            runner.runTests('logic');
+        }
+
+        function runBoardTests() {
+            runner.runTests('board');
+        }
+
+        function clearResults() {
+            runner.clear();
+        }
+
+        // 页面加载完成后自动运行测试
+        window.addEventListener('load', () => {
+            console.log('测试页面加载完成');
+        });
+    </script>
+</body>
+</html>

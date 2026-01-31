@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>五子棋游戏</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>五子棋游戏</h1>
+            <div class="game-info">
+                <div class="current-player">
+                    当前玩家: <span id="current-player">黑子</span>
+                </div>
+                <div class="game-status" id="game-status">游戏进行中</div>
+            </div>
+        </header>
+
+        <main>
+            <div class="game-controls">
+                <button id="new-game-btn" class="btn primary">新游戏</button>
+                <button id="undo-btn" class="btn secondary">悔棋</button>
+                <button id="restart-btn" class="btn secondary">重新开始</button>
+            </div>
+
+            <div class="game-board-container">
+                <canvas id="game-board" width="600" height="600"></canvas>
+            </div>
+
+            <div class="game-history">
+                <h3>游戏记录</h3>
+                <div id="move-list"></div>
+            </div>
+        </main>
+
+        <footer>
+            <p>使用鼠标点击棋盘下棋，先连成五子者获胜</p>
+        </footer>
+    </div>
+
+    <!-- 游戏逻辑模块 -->
+    <script src="src/game/GameLogic.js"></script>
+    <script src="src/game/GameBoard.js"></script>
+    <script src="src/game/GameController.js"></script>
+    
+    <!-- 用户界面模块 -->
+    <script src="src/ui/UIRenderer.js"></script>
+    <script src="src/ui/EventManager.js"></script>
+    
+    <!-- 工具函数 -->
+    <script src="src/utils/helpers.js"></script>
+    
+    <!-- 主程序 -->
+    <script src="src/main.js"></script>
+</body>
+</html>
